@@ -1,60 +1,204 @@
 <?php
-
 class Main
 {
-    public $word;
-    public $roundWord;
-    public $mistakeCounter = 0;
-    function startGame() {
+private array $hangmanASCII = ["
+  +---+
+  |   |
+      |
+      |
+      |
+      |
+=========", "
+  +---+
+  |   |
+  O   |
+      |
+      |
+      |
+=========", "
+  +---+
+  |   |
+  O   |
+  |   |
+      |
+      |
+=========", "
+  +---+
+  |   |
+  O   |
+ /|   |
+      |
+      |
+=========", "
+  +---+
+  |   |
+  O   |
+ /|\  |
+      |
+      |
+=========", "
+  +---+
+  |   |
+  O   |
+ /|\  |
+ /    |
+      |
+=========", "
+  +---+
+  |   |
+  O   |
+ /|\  |
+ / \  |
+      |
+========="];
+private array $word = [];
+private int $mistakes = 0;
+private array $enteredLetters = [];
+    function main() {
+        $start = $this->joinGame();
+        do {
+            if($start) {
+                $this->gameLoop();
+                $this->clearGameData();
+            }
+            $start = $this->joinGame();
+        } while ($start);
+    }
+    function joinGame(): bool
+    {
         $userInput = (string)readline("Wanna play?: (y/n)");
-        $answer = $this->checkStartGameAnswer($userInput);
-        if($answer === true) {
-            print "game started!\n";
-            $this->word = $this->getRandomWord();
-            $this->startRound();
-        } else {
-            print 'exit';
-            die;
-        }
- }
-    function checkStartGameAnswer($answer) {
-        if ($answer === 'y' || $answer === 'yes') {
+        if ($userInput === 'y' || $userInput === 'yes') {
             return true;
         } else {
             return false;
         }
     }
-
-    function getRandomWord() {
+    function gameLoop(): void
+    {
+        $this->setRandomWord();
+        do {
+           $gameEnd = $this->startRound();
+           if($gameEnd) {
+               return;
+           }
+        } while ($this->mistakes < 6);
+        echo "Упс..Вы проиграли!" . "\n";
+    }
+    function getFile($name): false|array
+    {
+        return file($name,0, null);
+    }
+    function getMBLetter($str, $index): string
+    {
+        return mb_substr($str, $index, 1);
+    }
+    function setRandomWord(): void
+    {
         $words = $this->getFile('words.txt');
-        $minNum = 0;
-        $maxNum = sizeof($words);
-        $randomNumber = rand($minNum, $maxNum);
-        return $words[$randomNumber];
-    }
-
-    function getFile($name) {
-        return $words = file($name,0, null);
-    }
-    function normalizeChar($str, $index) {
-        $char = mb_substr($str, $index, 1, 'UTF-8');
-        return $char;
-    }
-
-    function convertWord($str, $letter = '') {
-        if(empty($letter)) {
-            $this->roundWord = '';
-            for ($i = 0; $i <=  mb_strlen($str) - 1; $i++) {
-                $char = $this->normalizeChar($str, $i);
-                $this->roundWord .= '*';
-            }
-
+        $randomNumber = $this->getRandomNumberBySize(0, sizeof($words));
+        $word = mb_strtolower($words[$randomNumber]);
+        echo "Для тестирования))" . $word;
+        for ($i = 0; $i < mb_strlen($word) - 1; $i++) {
+            $value = [
+                "letter" => $this->getMBLetter($word, $i),
+                "show" => false
+            ];
+            $this->word[] = $value;
         }
     }
-    function startRound() {
-    if(empty($this->roundWord)) {
-        $this->convertWord($this->word);
+    function getRandomNumberBySize($minNum, $maxNum): int
+    {
+        return rand($minNum, $maxNum);
     }
-}
-//    function
+    function startRound(): false|string
+    {
+        $this->showGameStatus();
+        $letter = $this->getUserLetter();
+        if(!$letter) {
+            echo 'Ошибка валидации. Принимаются маленькие буквы кириллицы. Не повторяйте уже загаданные буквы.' . "\n";
+            return false;
+        }
+        $hasFound = $this->findLetterInWord($letter);
+        $win = $this->checkWin();
+        if($win) {
+            $this->showGameStatus();
+            echo 'Поздравляю! Вы победили!' . "\n";
+            return true;
+        }
+        if (!$hasFound) {
+            $this->showHangman($letter);
+        }
+        return false;
+    }
+    function getUserLetter(): string
+    {
+        $letter = (string)readline("Введите букву: ");
+        return $this->validateLetter($letter);
+    }
+    function validateLetter($str): string
+    {
+        $isNotCyrillic = preg_match( "/[а-я]/", $str ) != true;
+        $isTooBig = mb_strlen($str) > 1;
+        $wasEntered = in_array($str, $this->enteredLetters);
+        if($isNotCyrillic || $isTooBig || $wasEntered) {
+            return false;
+        }
+       return $str;
+    }
+    function findLetterInWord($letter): bool
+    {
+        $hasFound = false;
+        for ($i = 0; $i <  count($this->word); $i++) {
+            if($letter == $this->word[$i]['letter']) {
+                $this->word[$i]["show"] = true;
+                $hasFound = true;
+            }
+        }
+        return $hasFound;
+    }
+    function showWord(): void
+    {
+        foreach ($this->word as $value) {
+           if($value["show"]) {
+               echo $value["letter"];
+           } else {
+               echo "*";
+           }
+        }
+    }
+    function showHangman($char): void
+    {
+        $this->mistakes += 1;
+        $this->enteredLetters[] = $char;
+        echo $this->hangmanASCII[$this->mistakes];
+        echo "\n";
+    }
+    function showGameStatus(): void
+    {
+        echo "\n";
+        $this->showWord();
+        echo "\n";
+        $mistakesLetter = '';
+        foreach ($this->enteredLetters as $value) {
+            $mistakesLetter .= $value . ",";
+        }
+        echo "Ошибок: " . $this->mistakes . " - " . "[" . rtrim($mistakesLetter, ",") . "]";
+        echo "\n";
+    }
+    function checkWin() {
+        $win = true;
+        for ($i = 0; $i < count($this->word); $i++) {
+            if(!$this->word[$i]["show"]) {
+                $win = false;
+            }
+        }
+        return $win;
+    }
+    function clearGameData(): string
+    {
+        $this->word = [];
+        $this->mistakes = 0;
+        $this->enteredLetters = [];
+        return '';
+    }
 }
