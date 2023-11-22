@@ -77,8 +77,8 @@ private array $enteredLetters = [];
     {
         $this->setRandomWord();
         do {
-           $gameEnd = $this->startRound();
-           if($gameEnd) {
+           $isWin = $this->startRound();
+           if($isWin) {
                return;
            }
         } while ($this->mistakes < 6);
@@ -185,7 +185,8 @@ private array $enteredLetters = [];
         echo "Ошибок: " . $this->mistakes . " - " . "[" . rtrim($mistakesLetter, ",") . "]";
         echo "\n";
     }
-    function checkWin() {
+    function checkWin(): bool
+    {
         $win = true;
         for ($i = 0; $i < count($this->word); $i++) {
             if(!$this->word[$i]["show"]) {
