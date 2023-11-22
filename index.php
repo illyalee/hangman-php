@@ -1,4 +1,4 @@
 <?php
 require_once('Hangman.php');
-$main = new Hangman();
-$main->Hangman();
+$game = new Hangman();
+$game->Hangman();
