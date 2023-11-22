@@ -1,4 +1,4 @@
 <?php
-require_once('Main.php');
-$main = new Main();
-$main->main();
+require_once('Hangman.php');
+$main = new Hangman();
+$main->Hangman();

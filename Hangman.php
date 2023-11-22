@@ -1,6 +1,6 @@
 <?php
 
-class Main
+class Hangman
 {
     private array $hangmanASCII = ["
   +---+
@@ -56,7 +56,7 @@ class Main
     private int $mistakes = 0;
     private array $enteredLetters = [];
 
-    function main()
+    function Hangman()
     {
         $start = $this->joinGame();
         do {
